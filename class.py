@@ -10,3 +10,7 @@ y = MyClass('Juau')
 print(x.name)
 print(y.name)
 
+print(MyClass.__dict__)
+print(MyClass.__doc__)
+print(MyClass.__name__)
+print(MyClass.__module__)

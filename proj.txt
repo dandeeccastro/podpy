@@ -1,0 +1,9 @@
+- Ideia Geral do Projeto
+	- Cada capítulo do projeto seria uma pasta com os audios da fala
+	- Música de fundo numa pasta grande, escolhidas randomicamente
+	- Entre audios do mesmo capítulo, não tem espaço entre eles
+	- Entre capítulos, uma pequena transição (fade out fade in)
+	- Música continua até onde der para cada capítulo
+	- Transição entre músicas entre capítulos
+
+- 
