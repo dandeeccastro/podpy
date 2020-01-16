@@ -6,27 +6,17 @@ from pydub import AudioSegment
 class VoiceCompiler:
     final_output = None	
 
-    def __init__(self, id, file_path):
+    def __init__(self, id):
         self.id = id
         self.files = []
         self.output = None
-        self.gatherFiles(Path(file_path))
 
     def __del__(self):
-        if (len(self.files) is 0):
-            print('Folder ' + str(self.id) + ' has no files to generate')
         print('Compiler shutting down...')
 
     def gatherFiles(self, traverser):
-        print('Compiler ' + str(self.id) + ' gathering files')
-
-        i = 0
         for item in traverser.iterdir():
             self.files.append(str(item))
-            i += 1
-
-        if (len(self.files) == 0):
-            del self
 
     def getPureFileName(self, elem):
         name = elem.split('.')[0].split('/')[-1]
@@ -44,14 +34,13 @@ class VoiceCompiler:
         for i in range(len(self.files)):
             self.files[i] = AudioSegment.from_file(self.files[i])
         self.output = sum(self.files)
-        self.output.export("test"+str(self.id)+".mp3",format="mp3")
 
     # TODO adicionar transição entre caps
     def uniteOutput(self):
         if VoiceCompiler.final_output is None:
-            VoiceCompiler.final_output = self.output
+            VoiceCompiler.final_output = self.output.fade_in(1000)
         else:
-            VoiceCompiler.final_output += self.output
+            VoiceCompiler.final_output = VoiceCompiler.final_output.append(self.output)
 
     def exportFinalOutput():
         VoiceCompiler.final_output.export("pod.mp3",format="mp3")
@@ -71,17 +60,17 @@ class Main:
         Main.chapters = len([i for i in p.iterdir() if p.is_dir()])
 
         for i in range(Main.chapters):
-              Main.voice_compilers.append(VoiceCompiler(i+1, Main.path + 'assets/' + str(i+1)))
+              Main.voice_compilers.append(VoiceCompiler(i+1))
 
+
+    def main(self):
         for vc in Main.voice_compilers:
+            vc.gatherFiles( Path(Main.path + "assets/" + str(vc.id)) )
             vc.orderVoiceFiles()
             vc.generateFinalOutput()
             vc.uniteOutput()
 
         VoiceCompiler.exportFinalOutput()
-
-    def main(self):
-          print('main: TODO implement me')
 
 
 if __name__ == '__main__':
