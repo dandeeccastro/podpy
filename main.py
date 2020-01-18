@@ -7,6 +7,9 @@ import audioop
 # Pip installed libraries 
 from pydub import AudioSegment
 
+TRANSITION_TIME = 1000 # 1s 
+
+# TODO figure out why is sound peaking between chapters
 class BackgroundCompiler:
     final_output = None
     instances = []
@@ -31,15 +34,31 @@ class BackgroundCompiler:
             self.files.append( audio )
             mix_duration += self.files[i].duration_seconds * 1000
             i += 1
-        print(self.files)
 
+    # TODO make music end at music_length + 0.5s 
     def generateMusicMix(self, voice_length):
-        music_length = voice_length + 1000
-        for song in self.files:
+        music_length = voice_length + TRANSITION_TIME*2
+        i = 0
+        output_length = 0
+        while music_length > output_length:
+            song = self.files[i]
             if self.output is None :
-                self.output = song.fade_in(500)
+                if ( music_length <= len(song) ):
+                    diff = music_length - output_length
+                    song = song[:diff].fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    self.output = song
+                else:
+                    self.output = song.fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
             else:
-                self.output = self.output.append(song,crossfade=500)
+                if ( music_length <= len(song) + output_length ):
+                    diff = music_length - output_length
+                    song = song[:diff].fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    self.output += song
+                else:
+                    song = song.fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    self.output += song
+            output_length = len(self.output)
+            i = i + 1 % len(self.files)
 
     def getFinalOutput(self):
         return self.output
@@ -99,12 +118,15 @@ class Chapter:
     final_vc = None
     final_bc = None
     final_podcast = None
+    instances = []
 
     def __init__(self,vc,bc):
         self.vc = vc
         self.bc = bc
         self.output_vc = None
         self.output_bc = None
+        self.output = None
+        Chapter.instances.append(self)
 
     def compile(self):
         self.vc.gatherFiles( Path(Main.path + 'assets/' + str(self.vc.id)) )
@@ -119,20 +141,29 @@ class Chapter:
     def uniteVC(self):
         for vc in VoiceCompiler.instances:
             if Chapter.final_vc == None:
-                Chapter.final_vc = vc.output
+                Chapter.final_vc = AudioSegment.silent(duration=TRANSITION_TIME) + vc.output
             else:
-                Chapter.final_vc = Chapter.final_vc.append(vc.output)
+                Chapter.final_vc = Chapter.final_vc + AudioSegment.silent(duration=TRANSITION_TIME*2) + vc.output
 
     def uniteBC(self):
         for bc in BackgroundCompiler.instances:
             if Chapter.final_bc is None:
                 Chapter.final_bc = bc.output
             else:
-                Chapter.final_bc = Chapter.final_bc.append(bc.output)
+                Chapter.final_bc += bc.output
+    
+    def uniteOutputs(self):
+        diff = len(self.output_bc) - len(self.output_vc)
+        print(diff)
+        self.output = self.output_bc.overlay(self.output_vc,position=int(diff/2),gain_during_overlay=-16.0)
 
     def compileAndExport(self):
-        Chapter.final_vc.export('final_vc.mp3',format='mp3')
-        Chapter.final_bc.export('final_bc.mp3',format='mp3')
+        for chapter in Chapter.instances:
+            if Chapter.final_podcast is None:
+                Chapter.final_podcast = chapter.output
+            else:
+                Chapter.final_podcast += chapter.output
+        Chapter.final_podcast.export("podcast.mp3",format='mp3')
 
 class Main:
 
@@ -154,8 +185,7 @@ class Main:
     def main(self):
         for chapter in Main.compilers:
             chapter.compile()
-        Main.compilers[0].uniteVC()
-        Main.compilers[0].uniteBC()
+            chapter.uniteOutputs()
         Main.compilers[0].compileAndExport()
 
 
