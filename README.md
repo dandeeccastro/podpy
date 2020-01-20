@@ -1,5 +1,7 @@
 # Pod.py: A Alternativa Preguiçosa para Podcasters
 
+Script para compilar um podcast com música de fundo e transição entre capítulos
+
 ## Introdução
 
 Digamos que você quer fazer um podcast, mas tem preguiça de editar. Então você é que nem eu: uma pessoa ~~preguiçosa~~ que quer falar do que gosta ao mesmo tempo que foca somente no importante; o conteúdo. Sendo assim, PodPy é feito para você!
