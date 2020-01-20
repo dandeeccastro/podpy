@@ -7,12 +7,16 @@ import audioop
 # Pip installed libraries 
 from pydub import AudioSegment
 
+# Global variables
 TRANSITION_TIME = 1000 # 1s 
+FINAL_FILENAME = "podcast.mp3"
+FILE_PATH = "./"
 
 # TODO figure out why is sound peaking between chapters
 class BackgroundCompiler:
     final_output = None
     instances = []
+    last_music_index = -1
 
     def __init__(self,id):
         self.id = id
@@ -28,14 +32,19 @@ class BackgroundCompiler:
         mix_duration = 0
         i = 0
         files = [j for j in traverser.iterdir()]
-        print(len(files))
+        used_music_indexes = []
         while (mix_duration < voice_length):
-            audio = AudioSegment.from_file( files[ random.randint(0,len(files) - 1 ) ])
-            self.files.append( audio )
-            mix_duration += self.files[i].duration_seconds * 1000
-            i += 1
+            rand = random.randint(0,len(files) - 1)
+            if rand in used_music_indexes or rand is BackgroundCompiler.last_music_index:
+                continue
+            else:
+                used_music_indexes.append(rand)
+                BackgroundCompiler.last_music_index = rand
+                audio = AudioSegment.from_file( files[ rand ] )
+                self.files.append( audio )
+                mix_duration += self.files[i].duration_seconds * 1000
+                i += 1
 
-    # TODO make music end at music_length + 0.5s 
     def generateMusicMix(self, voice_length):
         music_length = voice_length + TRANSITION_TIME*2
         i = 0
@@ -163,7 +172,7 @@ class Chapter:
                 Chapter.final_podcast = chapter.output
             else:
                 Chapter.final_podcast += chapter.output
-        Chapter.final_podcast.export("podcast.mp3",format='mp3')
+        Chapter.final_podcast.export(FINAL_FILENAME,format='mp3')
 
 class Main:
 
@@ -193,4 +202,7 @@ if __name__ == '__main__':
     if(len(sys.argv) < 2):
         Main().main()
     else:
-        Main(sys.argv[1]).main()
+        # Parsing CLI arguments
+        # TODO make this actually good
+        FINAL_FILENAME = sys.argv[1]
+        Main().main()
