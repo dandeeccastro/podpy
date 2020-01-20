@@ -16,7 +16,11 @@ Digamos que você quer fazer um podcast, mas tem preguiça de editar. Então voc
 git clone https://github.com/dandeeccastro/podpy
 cd podpy
 ```
-2. Crie a pasta que você vai botar os arquivos do seu podcast. Ela tem que conter certas pastas para funcionar direito. Uma delas é a `assets`. Ela deverá ter a seguinte estrutura: 
+2. Instale as dependências do projeto com pip
+```bash
+pip3 install pydub
+```
+3. Crie a pasta que você vai botar os arquivos do seu podcast. Ela tem que conter certas pastas para funcionar direito. Uma delas é a `assets`. Ela deverá ter a seguinte estrutura: 
 
 ```bash
 ├── assets
@@ -36,7 +40,7 @@ Cada pasta dentro dela representará os *capítulos* do seu podcast, e cada cap�
 
 A outra pasta é a `music`, que vai conter suas músicas de fundo. Pode botar quantas músicas quiser, o programa vai fazer um *mix aleatório* delas como música de fundo!
 
-3. Rode o código e seja feliz!
+4. Rode o código e seja feliz!
 ```bash
 python3 main.py
 ```
