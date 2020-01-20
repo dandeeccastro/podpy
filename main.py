@@ -49,8 +49,12 @@ class BackgroundCompiler:
         music_length = voice_length + TRANSITION_TIME*2
         i = 0
         output_length = 0
+
+        for song in self.files:
+            song = song
+
         while music_length > output_length:
-            song = self.files[i]
+            song = self.files[i].apply_gain(-20.0)
             if self.output is None :
                 if ( music_length <= len(song) ):
                     diff = music_length - output_length
@@ -164,7 +168,7 @@ class Chapter:
     def uniteOutputs(self):
         diff = len(self.output_bc) - len(self.output_vc)
         print(diff)
-        self.output = self.output_bc.overlay(self.output_vc,position=int(diff/2),gain_during_overlay=-16.0)
+        self.output = self.output_bc.overlay(self.output_vc,position=int(diff/2))
 
     def compileAndExport(self):
         for chapter in Chapter.instances:
