@@ -186,7 +186,6 @@ class Main:
     final_filename = "podcast.mp3"
 
     def __init__(self, path=None, final_filename=None):
-#        self.evaluatePath(path)
         if path is not None:
             Main.path = path
         if final_filename is not None:
@@ -204,19 +203,3 @@ class Main:
             chapter.compile()
             chapter.uniteOutputs()
         Main.compilers[0].compileAndExport()
-
-    def evaluatePath(self,test_path):
-        print("Do I even exist?")
-        traverser = Path(test_path)
-        has_music = False
-        has_assets = False
-        for path in traverser.iterdir():
-            print(path.name)
-            if "music" in path.name:
-                has_music = True
-            if "assets" in path.name:
-                has_assets = True
-        if not has_assets:
-            raise exceptions.ImproperFolderConfigurationException("Folder path is missing 'assets' folder!")
-        elif not has_music:
-            raise exceptions.ImproperFolderConfigurationException("Folder path is missing 'music' folder!")
