@@ -4,14 +4,8 @@ import random
 from pathlib import Path
 import audioop
 
-# My modules
-import exceptions
-
 # Pip installed libraries 
 from pydub import AudioSegment
-
-# Global variables
-TRANSITION_TIME = 1000 # 1s 
 
 class BackgroundCompiler:
     final_output = None
@@ -53,30 +47,31 @@ class BackgroundCompiler:
             It'll adjust the song length and effects based on if it's the beginning of the mix, getting to the end
             or in the middle.
         """
-        music_length = voice_length + TRANSITION_TIME*2
+        music_length = voice_length + Main.transition_time*2
         i = 0
         output_length = 0
 
         # I don't really know why is this here and why I didn't notice it before lol
+        # TODO: change this somehow
         for song in self.files:
             song = song
 
         while music_length > output_length:
-            song = self.files[i].apply_gain(-20.0)
+            song = self.files[i].apply_gain(Main.decay)
             if self.output is None :
                 if ( music_length <= len(song) ):
                     diff = music_length - output_length
-                    song = song[:diff].fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    song = song[:diff].fade_in(Main.transition_time).fade_out(Main.transition_time)
                     self.output = song
                 else:
-                    self.output = song.fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    self.output = song.fade_in(Main.transition_time).fade_out(Main.transition_time)
             else:
                 if ( music_length <= len(song) + output_length ):
                     diff = music_length - output_length
-                    song = song[:diff].fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    song = song[:diff].fade_in(Main.transition_time).fade_out(Main.transition_time)
                     self.output += song
                 else:
-                    song = song.fade_in(TRANSITION_TIME).fade_out(TRANSITION_TIME)
+                    song = song.fade_in(Main.transition_time).fade_out(Main.transition_time)
                     self.output += song
             output_length = len(self.output)
             i = i + 1 % len(self.files)
@@ -120,7 +115,7 @@ class VoiceCompiler:
     def generateFinalOutput(self):
         """ Generates output for this VoiceCompiler's instance """
         for i in range(len(self.files)):
-            self.files[i] = AudioSegment.from_file(self.files[i])
+            self.files[i] = AudioSegment.from_file(self.files[i]).apply_gain(Main.voice_gain)
         self.output = sum(self.files)
 
     def getFinalOutput(self):
@@ -160,12 +155,12 @@ class Chapter:
 
     def compile(self):
         """ Compiles final results for this object's VoiceCompiler and BackgroundCompiler instances """
-        self.vc.gatherFiles( Path(Main.path + 'assets/' + str(self.vc.id)) )
+        self.vc.gatherFiles( Path(Main.path + '/assets/' + str(self.vc.id)) )
         self.vc.orderVoiceFiles()
         self.vc.generateFinalOutput()
         self.output_vc = self.vc.getFinalOutput()
 
-        self.bc.gatherFiles( self.vc, Path(Main.path + "music/") )
+        self.bc.gatherFiles( self.vc, Path(Main.music_path) )
         self.bc.generateMusicMix( len(self.output_vc) )
         self.output_bc = self.bc.getFinalOutput()
 
@@ -173,9 +168,9 @@ class Chapter:
         """ Unites all VoiceCompiler outputs into a single output blob and adds it to final_vc """
         for vc in VoiceCompiler.instances:
             if Chapter.final_vc == None:
-                Chapter.final_vc = AudioSegment.silent(duration=TRANSITION_TIME) + vc.output
+                Chapter.final_vc = AudioSegment.silent(duration=Main.transition_time) + vc.output
             else:
-                Chapter.final_vc = Chapter.final_vc + AudioSegment.silent(duration=TRANSITION_TIME*2) + vc.output
+                Chapter.final_vc = Chapter.final_vc + AudioSegment.silent(duration=Main.transition_time*2) + vc.output
 
     def uniteBC(self):
         """ Unites all BackgroundCompiler outputs to a single output and stores it in final_bc """
@@ -205,21 +200,32 @@ class Chapter:
 
 class Main:
 
-    path = './'
+    # Arguments defaulted by optparse
+    final_filename = None
+    transition_time = None
+    path = None
+    music_path = None
+    voice_gain = None
+
+    # Arguments programatically setted
     chapters = None
     compilers = []
-    final_filename = "podcast.mp3"
 
-    def __init__(self, path=None, final_filename=None):
+    
+
+    def __init__(self, path=None, final_filename=None, music_path=None, decay=None, transition_time=None, voice_gain=None):
         """ Initializer gets optional parameters, uses path to gather amount of chapters and 
             appends VoiceCompiler and BackgroundCompiler instances to compilers
         """
-        if path is not None:
-            Main.path = path
-        if final_filename is not None:
-            Main.final_filename = final_filename
 
-        p = Path(Main.path + "assets/")
+        Main.path = path
+        Main.final_filename = final_filename
+        Main.music_path = music_path
+        Main.decay = decay
+        Main.transition_time = transition_time
+        Main.voice_gain = voice_gain
+
+        p = Path(Main.path + "/assets/")
         Main.chapters = len([i for i in p.iterdir() if p.is_dir()])
 
         for i in range(Main.chapters):
