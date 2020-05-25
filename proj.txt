@@ -6,4 +6,8 @@
 	- Música continua até onde der para cada capítulo
 	- Transição entre músicas entre capítulos
 
-- 
+- Problemas
+	- Não tem como mudar os valores por meio do terminal (kwargs?)
+	- Pathfinding tá um horror 
+		- Mudar de pathlib pra os.path sepa 
+		- Qual classe recebe qual item?
