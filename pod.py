@@ -7,73 +7,73 @@ import audioop
 # Pip installed libraries 
 from pydub import AudioSegment
 
-class BackgroundCompiler:
-    final_output = None
+class BackgroundMusicCompiler:
+#    final_output = None
     instances = []
-    last_music_index = -1
+    lastMusicIndex = -1
 
     def __init__(self,id):
         self.id = id
         self.output = None
         self.files = []
-        BackgroundCompiler.instances.append(self)
+        BackgroundMusicCompiler.instances.append(self)
 
     def __del__(self):
         print('Background Compiler shutting down...')
 
-    def gatherFiles(self, voice_compiler ,traverser):
+    def gatherFiles(self, voiceCompiler ,paths):
         """ Collects files from music folder to use in the mix, and will do so while
         randomizing choices and avoiding already used songs 
         """
-        voice_length = voice_compiler.output.duration_seconds * 1000
-        mix_duration = 0
+        voiceLength = voiceCompiler.output.duration_seconds * 1000
+        mixDuration = 0
         i = 0
-        files = [j for j in traverser.iterdir()]
-        used_music_indexes = []
-        while (mix_duration < voice_length):
-            rand = random.randint(0,len(files) - 1)
-            if rand in used_music_indexes or rand is BackgroundCompiler.last_music_index:
+        files = [songFile for songFile in paths.iterdir()]
+        usedMusicIndexes = []
+        while (mixDuration < voiceLength):
+            randomIndex = random.randint(0,len(files) - 1)
+            if randomIndex in usedMusicIndexes or randomIndex is BackgroundMusicCompiler.lastMusicIndex:
                 continue
             else:
-                used_music_indexes.append(rand)
-                BackgroundCompiler.last_music_index = rand
-                audio = AudioSegment.from_file( files[ rand ] )
+                usedMusicIndexes.append(rand)
+                BackgroundMusicCompiler.lastMusicIndex = randomIndex
+                audio = AudioSegment.from_file( files[ randomIndex ] )
                 self.files.append( audio )
-                mix_duration += self.files[i].duration_seconds * 1000
+                mixDuration += self.files[i].duration_seconds * 1000
                 i += 1
 
-    def generateMusicMix(self, voice_length):
-        """ Mixes background music to cover voice_length + transition time twice, for fade-in and fade-out. 
+    def generateMusicMix(self, voiceLength):
+        """ Mixes background music to cover voiceLength + transition time twice, for fade-in and fade-out. 
             It'll adjust the song length and effects based on if it's the beginning of the mix, getting to the end
             or in the middle.
         """
-        music_length = voice_length + Main.transition_time*2
+        musicLength = voiceLength + Main.transitionTime*2
         i = 0
-        output_length = 0
+        outputLength = 0
 
         # I don't really know why is this here and why I didn't notice it before lol
         # TODO: change this somehow
         for song in self.files:
             song = song
 
-        while music_length > output_length:
+        while musicLength > outputLength:
             song = self.files[i].apply_gain(Main.decay)
             if self.output is None :
-                if ( music_length <= len(song) ):
-                    diff = music_length - output_length
-                    song = song[:diff].fade_in(Main.transition_time).fade_out(Main.transition_time)
+                if ( musicLength <= len(song) ):
+                    diff = musicLength - outputLength
+                    song = song[:diff].fade_in(Main.transitionTime).fade_out(Main.transitionTime)
                     self.output = song
                 else:
-                    self.output = song.fade_in(Main.transition_time).fade_out(Main.transition_time)
+                    self.output = song.fade_in(Main.transitionTime).fade_out(Main.transitionTime)
             else:
-                if ( music_length <= len(song) + output_length ):
-                    diff = music_length - output_length
-                    song = song[:diff].fade_in(Main.transition_time).fade_out(Main.transition_time)
+                if ( musicLength <= len(song) + outputLength ):
+                    diff = musicLength - outputLength
+                    song = song[:diff].fade_in(Main.transitionTime).fade_out(Main.transitionTime)
                     self.output += song
                 else:
-                    song = song.fade_in(Main.transition_time).fade_out(Main.transition_time)
+                    song = song.fade_in(Main.transitionTime).fade_out(Main.transitionTime)
                     self.output += song
-            output_length = len(self.output)
+            outputLength = len(self.output)
             i = i + 1 % len(self.files)
 
     def getFinalOutput(self):
@@ -82,7 +82,7 @@ class BackgroundCompiler:
     
 
 class VoiceCompiler:
-    final_output = None	
+#    final_output = None	
     instances = []
 
     def __init__(self, id):
@@ -94,18 +94,18 @@ class VoiceCompiler:
     def __del__(self):
         print('Voice Compiler shutting down...')
 
-    def gatherFiles(self, traverser):
+    def gatherFiles(self, paths):
         """ Gathers all voice files from project filesystem """
-        for item in traverser.iterdir():
-            self.files.append(str(item))
+        for voiceFile in paths.iterdir():
+            self.files.append( str(voiceFile) )
 
-    def getPureFileName(self, elem):
+    def getPureFileName(self, filename):
         """ Gets file name without file extension from elem """
-        return elem.split('.')[0].split('/')[-1]
+        return filename.split('.')[0].split('/')[-1]
     
-    def getFileFormat(self,elem):
-        """ Gets file format of elem """
-        return elem.split('.')[-1]
+#    def getFileFormat(self,elem):
+#        """ Gets file format of elem """
+#        return elem.split('.')[-1]
 
     def orderVoiceFiles(self):
         """ Orders voice files based by their filename """
@@ -115,127 +115,125 @@ class VoiceCompiler:
     def generateFinalOutput(self):
         """ Generates output for this VoiceCompiler's instance """
         for i in range(len(self.files)):
-            self.files[i] = AudioSegment.from_file(self.files[i]).apply_gain(Main.voice_gain)
+            self.files[i] = AudioSegment.from_file(self.files[i]).apply_gain(Main.voiceGain)
         self.output = sum(self.files)
 
     def getFinalOutput(self):
         """ Getter for this VoiceCompiler's output """
         return self.output
 
-    def uniteOutput(self):
-        """ Unites all VoiceCompiler outputs into one final variable """
-        if VoiceCompiler.final_output is None:
-            VoiceCompiler.final_output = self.output.fade_in(1000)
-        else:
-            VoiceCompiler.final_output = VoiceCompiler.final_output.append(self.output)
-
-    def getPrivateOutputLength(self):
-        """ Getter for this instance's output duration in seconds """
-        return self.output.duration_seconds
-
-    def exportFinalOutput(self):
-        """ Exports final output from all VoiceCompilers instances """
-        return self.final_output.export("pod.mp3",format="mp3")
+#    def uniteOutput(self):
+#        """ Unites all VoiceCompiler outputs into one final variable """
+#        if VoiceCompiler.final_output is None:
+#            VoiceCompiler.final_output = self.output.fade_in(1000)
+#        else:
+#            VoiceCompiler.final_output = VoiceCompiler.final_output.append(self.output)
+#
+#    def getPrivateOutputLength(self):
+#        """ Getter for this instance's output duration in seconds """
+#        return self.output.duration_seconds
+#
+#    def exportFinalOutput(self):
+#        """ Exports final output from all VoiceCompilers instances """
+#        return self.final_output.export("pod.mp3",format="mp3")
 
 class Chapter:
 
-    final_vc = None
-    final_bc = None
-    final_podcast = None
+    finalVoiceCompilation = None
+    finalBackgroundMusicCompilation = None
+    finalPodcast = None
     instances = []
 
-    def __init__(self,vc,bc):
-        """ Stores VoiceCompiler and BackgroundCompiler instances to Chapter, and stores itself on a public attribute instances """
-        self.vc = vc
-        self.bc = bc
-        self.output_vc = None
-        self.output_bc = None
+    def __init__(self,voiceCompiler,backgroundCompiler):
+        """ Stores VoiceCompiler and BackgroundMusicCompiler instances to Chapter, and stores itself on a public attribute instances """
+        self.voiceCompiler = voiceCompiler
+        self.backgroundCompiler = backgroundCompiler
+        self.voiceCompilerOutput = None
+        self.backgroundCompilerOutput = None
         self.output = None
         Chapter.instances.append(self)
 
     def compile(self):
-        """ Compiles final results for this object's VoiceCompiler and BackgroundCompiler instances """
-        self.vc.gatherFiles( Path(Main.path + '/assets/' + str(self.vc.id)) )
-        self.vc.orderVoiceFiles()
-        self.vc.generateFinalOutput()
-        self.output_vc = self.vc.getFinalOutput()
+        """ Compiles final results for this object's VoiceCompiler and BackgroundMusicCompiler instances """
+        self.voiceCompiler.gatherFiles( Path(Main.path + '/assets/' + str(self.voiceCompiler.id)) )
+        self.voiceCompiler.orderVoiceFiles()
+        self.voiceCompiler.generateFinalOutput()
+        self.voiceCompilerOutput = self.voiceCompiler.getFinalOutput()
 
-        self.bc.gatherFiles( self.vc, Path(Main.music_path) )
-        self.bc.generateMusicMix( len(self.output_vc) )
-        self.output_bc = self.bc.getFinalOutput()
+        self.backgroundCompiler.gatherFiles( self.voiceCompiler, Path(Main.musicPath) )
+        self.backgroundCompiler.generateMusicMix( len(self.voiceCompilerOutput) )
+        self.backgroundCompilerOutput = self.backgroundCompiler.getFinalOutput()
 
-    def uniteVC(self):
-        """ Unites all VoiceCompiler outputs into a single output blob and adds it to final_vc """
-        for vc in VoiceCompiler.instances:
-            if Chapter.final_vc == None:
-                Chapter.final_vc = AudioSegment.silent(duration=Main.transition_time) + vc.output
-            else:
-                Chapter.final_vc = Chapter.final_vc + AudioSegment.silent(duration=Main.transition_time*2) + vc.output
-
-    def uniteBC(self):
-        """ Unites all BackgroundCompiler outputs to a single output and stores it in final_bc """
-        for bc in BackgroundCompiler.instances:
-            if Chapter.final_bc is None:
-                Chapter.final_bc = bc.output
-            else:
-                Chapter.final_bc += bc.output
+#    def uniteVC(self):
+#        """ Unites all VoiceCompiler outputs into a single output blob and adds it to finalVoiceCompilation """
+#        for voiceCompiler in VoiceCompiler.instances:
+#            if Chapter.finalVoiceCompilation == None:
+#                Chapter.finalVoiceCompilation = AudioSegment.silent(duration=Main.transitionTime) + voiceCompiler.output
+#            else:
+#                Chapter.finalVoiceCompilation = Chapter.finalVoiceCompilation + AudioSegment.silent(duration=Main.transitionTime*2) + voiceCompiler.output
+#
+#    def uniteBC(self):
+#        """ Unites all BackgroundMusicCompiler outputs to a single output and stores it in finalBackgroundMusicCompilation """
+#        for backgroundCompiler in BackgroundMusicCompiler.instances:
+#            if Chapter.finalBackgroundMusicCompilation is None:
+#                Chapter.finalBackgroundMusicCompilation = backgroundCompiler.output
+#            else:
+#                Chapter.finalBackgroundMusicCompilation += backgroundCompiler.output
     
     def uniteOutputs(self):
         """ Compiles final podcast output, mixing voice and background output. It does so by calculating 
             the difference between output lengths, and settling the voice output in the middle of the background 
             output, so that fade-in and fade-out effects sound correct
         """
-        diff = len(self.output_bc) - len(self.output_vc)
+        diff = len(self.backgroundCompilerOutput) - len(self.voiceCompilerOutput)
         print(diff)
-        self.output = self.output_bc.overlay(self.output_vc,position=int(diff/2))
+        self.output = self.backgroundCompilerOutput.overlay(self.voiceCompilerOutput,position=int(diff/2))
 
     def compileAndExport(self):
         """ Generates final file by adding up every single Chapter instance output  """
         for chapter in Chapter.instances:
-            if Chapter.final_podcast is None:
-                Chapter.final_podcast = chapter.output
+            if Chapter.finalPodcast is None:
+                Chapter.finalPodcast = chapter.output
             else:
-                Chapter.final_podcast += chapter.output
-        Chapter.final_podcast.export(Main.final_filename,format='mp3')
+                Chapter.finalPodcast += chapter.output
+        Chapter.finalPodcast.export(Main.finalFilename,format='mp3')
 
 class Main:
 
     # Arguments defaulted by optparse
-    final_filename = None
-    transition_time = None
+    finalFilename = None
+    transitionTime = None
     path = None
-    music_path = None
-    voice_gain = None
+    musicPath = None
+    voiceGain = None
 
     # Arguments programatically setted
-    chapters = None
-    compilers = []
+    numberOfChapters = None
+    chapters = []
 
-    
-
-    def __init__(self, path=None, final_filename=None, music_path=None, decay=None, transition_time=None, voice_gain=None):
+    def __init__(self, path=None, finalFilename=None, musicPath=None, decay=None, transitionTime=None, voiceGain=None):
         """ Initializer gets optional parameters, uses path to gather amount of chapters and 
-            appends VoiceCompiler and BackgroundCompiler instances to compilers
+            appends VoiceCompiler and BackgroundMusicCompiler instances to compilers
         """
 
         Main.path = path
-        Main.final_filename = final_filename
-        Main.music_path = music_path
+        Main.finalFilename = finalFilename
+        Main.musicPath = musicPath
         Main.decay = decay
-        Main.transition_time = transition_time
-        Main.voice_gain = voice_gain
+        Main.transitionTime = transitionTime
+        Main.voiceGain = voiceGain
 
-        p = Path(Main.path + "/assets/")
-        Main.chapters = len([i for i in p.iterdir() if p.is_dir()])
+        paths = Path(Main.path + "/assets/")
+        Main.numberOfChapters = len([item for item in paths.iterdir() if paths.is_dir()])
 
-        for i in range(Main.chapters):
-              Main.compilers.append( Chapter( VoiceCompiler(i+1),BackgroundCompiler(i+1) ) )
+        for i in range(Main.numberOfChapters):
+              Main.chapters.append( Chapter( VoiceCompiler(i+1),BackgroundMusicCompiler(i+1) ) )
 
     def main(self):
         """ Goes through the whole compiling process, generating chapter instances for each section in the
             file system, compiling voice and audio and generating the final file 
         """
-        for chapter in Main.compilers:
+        for chapter in Main.chapters:
             chapter.compile()
             chapter.uniteOutputs()
-        Main.compilers[0].compileAndExport()
+        Main.chapters[0].compileAndExport()
